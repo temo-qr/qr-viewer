@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مستعرض المستندات — line4ink</title>
+    <title>line4ink</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@700;800&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
@@ -24,7 +24,7 @@
             overflow-x: hidden;
         }
         #content { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
-        img { width: 100%; height: auto; display: block; }
+        img { width: 100%; height: auto; max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
         iframe { width: 100%; height: 100%; border: none; }
 
         /* تصميم رسائل الحالة */
@@ -62,10 +62,9 @@
         .status-title { font-family: 'Cairo', sans-serif; color: var(--ink); font-size: 21px; font-weight: 800; margin: 0 0 10px 0; }
         .status-desc { color: var(--muted); font-size: 14.5px; line-height: 1.7; margin: 0; }
 
-        /* مؤشر التحميل */
+        /* مؤشر التحميل النظيف */
         .loader-wrap { display: flex; flex-direction: column; align-items: center; gap: 18px; }
         .loader { width: 38px; height: 38px; border: 3.5px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.9s linear infinite; }
-        .loader-label { color: var(--muted); font-size: 13px; font-family: 'Tajawal', sans-serif; }
         @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
@@ -77,7 +76,6 @@
                 <svg viewBox="0 0 24 24" fill="none"><path d="M12 2C12 2 6 9 6 14a6 6 0 0012 0c0-5-6-12-6-12z" fill="#F7F4EE"/></svg>
             </div>
             <div class="loader"></div>
-            <div class="loader-label">جاري تحميل المستند...</div>
         </div>
     </div>
 
@@ -85,9 +83,7 @@
         const urlParams = new URLSearchParams(window.location.search);
         const fileName = urlParams.get('file'); 
         const contentDiv = document.getElementById('content');
-        
-        // معرف فرعي سري خاص بيك لحفظ البيانات
-        const dbBucket = "cb_line4ink_qr_2026"; 
+        const projectGroup = "line4ink_qr"; 
 
         if (fileName) {
             checkFileStatusAndRender();
@@ -96,43 +92,51 @@
         }
 
         async function checkFileStatusAndRender() {
-            let status = "active";
-            let expires = "";
+            const fileKey = fileName.replace(/[^a-zA-Z0-9]/g, '_');
+            let isPaused = false;
+            let expireValue = 0;
 
+            // 1. الفحص السحابي للإيقاف والتشغيل (CounterAPI)
             try {
-                // 1. جلب إعدادات الملف من المخزن السحابي
-                const res = await fetch(`https://kvdb.io/${dbBucket}/settings_${fileName}`);
-                if (res.ok) {
-                    const data = await res.json();
-                    status = data.status || "active";
-                    expires = data.expires || "";
+                const pRes = await fetch(`https://api.counterapi.dev/v1/${projectGroup}/paused_${fileKey}`);
+                if (pRes.ok) {
+                    const pData = await pRes.json();
+                    if (pData.count === 1) isPaused = true;
                 }
-            } catch (e) { console.log("No remote settings found, using defaults."); }
+            } catch (e) {}
 
-            // 2. التحقق من ميزة (إيقاف وتشغيل الباركود)
-            if (status === "paused") {
+            // 2. الفحص السحابي لتاريخ الصلاحية
+            try {
+                const eRes = await fetch(`https://api.counterapi.dev/v1/${projectGroup}/expire_${fileKey}`);
+                if (eRes.ok) {
+                    const eData = await eRes.json();
+                    expireValue = eData.count || 0;
+                }
+            } catch (e) {}
+
+            // إذا تم تفعيل الإيقاف المؤقت للباركود
+            if (isPaused) {
                 showError("🚫", "الرابط متوقف مؤقتاً", "قام صاحب العمل بإيقاف صلاحية هذا الباركود مؤقتاً، يرجى المراجعة لاحقاً.");
                 return;
             }
 
-            // 3. التحقق من ميزة (صلاحية الملف التاريخية)
-            if (expires) {
-                const today = new Date().toISOString().split('T')[0];
-                if (today > expires) {
-                    showError("⏳", "انتهت صلاحية الرابط", `عذراً، هذا المستند كان متاحاً حتى تاريخ ${expires} وفقد صلاحيته الآن.`);
+            // إذا انتهى تاريخ الصلاحية المحدد للملف
+            if (expireValue > 0) {
+                const todayInt = parseInt(new Date().toISOString().split('T')[0].replace(/-/g, ''));
+                if (todayInt > expireValue) {
+                    const expStr = expireValue.toString();
+                    const formattedDate = `${expStr.substring(0,4)}/${expStr.substring(4,6)}/${expStr.substring(6,8)}`;
+                    showError("⏳", "انتهت صلاحية الرابط", `عذراً، هذا المستند انتهت صلاحية عرضه بتاريخ ${formattedDate}.`);
                     return;
                 }
             }
 
-            // 4. ميزة (عداد المشاهدات والزيارات) - تسجيل الزيارة في الخلفية
+            // 3. زيادة عداد المشاهدات الحقيقي بمقدار +1 تلقائياً في الخلفية
             try {
-                fetch(`https://kvdb.io/${dbBucket}/views_${fileName}`).then(r => r.text()).then(currentViews => {
-                    let nextViews = (parseInt(currentViews) || 0) + 1;
-                    fetch(`https://kvdb.io/${dbBucket}/views_${fileName}`, { method: 'PUT', body: nextViews.toString() });
-                });
-            } catch(e) { console.log("Counter error"); }
+                fetch(`https://api.counterapi.dev/v1/${projectGroup}/views_${fileKey}/increment`);
+            } catch(e) {}
 
-            // 5. عرض الملف إذا كان كل شيء سليم
+            // 4. عرض الملف النظيف بملء الشاشة
             const relativePath = "images/" + fileName;
             if (fileName.toLowerCase().endsWith('.pdf')) {
                 const absoluteUrl = window.location.origin + window.location.pathname.replace('index.html', '') + relativePath;

@@ -184,6 +184,7 @@
             font-size: 12.5px;
             font-family: inherit;
             transition: all 0.15s;
+            outline: none;
         }
         .toggle-btn:hover { filter: brightness(0.96); }
         .toggle-btn.paused { background: var(--danger-soft); color: var(--danger); }
@@ -212,6 +213,7 @@
             cursor: pointer;
             width: 100%;
             transition: background 0.2s, transform 0.15s;
+            outline: none;
         }
         button.main-btn:hover { background: var(--accent-hover); transform: translateY(-1px); }
         button.main-btn:active { transform: translateY(0); }
@@ -288,7 +290,7 @@
         <div class="admin-panel" id="panel">
             <div class="admin-panel-inner">
                 <span class="eyebrow">ADMIN CONSOLE</span>
-                <h2>لوحة التحكم في المستندات</h2>
+                <h2>لوحة التحكم</h2>
 
                 <input type="text" id="searchInput" class="search-box" placeholder="🔍 ابحث عن ملف من المرفوعين..." oninput="filterFiles()">
 
@@ -325,9 +327,9 @@
     </div>
 
     <script>
-        const dbBucket = "cb_line4ink_qr_2026"; 
+        const projectGroup = "line4ink_qr"; 
         let allFiles = []; 
-        let currentFileStatus = "active";
+        let isFilePaused = false; 
 
         const password = prompt("من فضلك أدخل كلمة المرور للدخول للوحة التحكم:");
         if (password === "Mohamed@9498#") {
@@ -368,7 +370,6 @@
             });
         }
 
-        // ميزة البحث والفلترة الفورية
         function filterFiles() {
             const query = document.getElementById('searchInput').value.toLowerCase();
             const filtered = allFiles.filter(f => f.name.toLowerCase().includes(query));
@@ -377,44 +378,58 @@
             document.getElementById('resultBox').style.display = 'none';
         }
 
-        // جلب العداد والحالة فور اختيار الملف
         async function onFileSelected() {
             const fileName = document.getElementById('fileSelect').value;
             if (!fileName) { document.getElementById('metaCard').style.display = 'none'; return; }
             
             document.getElementById('metaCard').style.display = 'block';
-            document.getElementById('viewCount').innerText = "🔄..";
+            document.getElementById('viewCount').innerText = "...";
             
-            // 1. جلب عداد الزيارات
+            const fileKey = fileName.replace(/[^a-zA-Z0-9]/g, '_');
+            
+            // 1. جلب عدد المشاهدات من السيرفر السحابي الجديد
             try {
-                const vRes = await fetch(`https://kvdb.io/${dbBucket}/views_${fileName}`);
-                document.getElementById('viewCount').innerText = vRes.ok ? await vRes.text() : "0";
+                const vRes = await fetch(`https://api.counterapi.dev/v1/${projectGroup}/views_${fileKey}`);
+                if (vRes.ok) {
+                    const vData = await vRes.json();
+                    document.getElementById('viewCount').innerText = vData.count || "0";
+                } else { document.getElementById('viewCount').innerText = "0"; }
             } catch(e) { document.getElementById('viewCount').innerText = "0"; }
             
-            // 2. جلب إعدادات الصلاحية والتشغيل
-            currentFileStatus = "active";
-            document.getElementById('expireDateInput').value = "";
+            // 2. جلب حالة الإيقاف المؤقت للباركود
+            isFilePaused = false;
+            try {
+                const pRes = await fetch(`https://api.counterapi.dev/v1/${projectGroup}/paused_${fileKey}`);
+                if (pRes.ok) {
+                    const pData = await pRes.json();
+                    if (pData.count === 1) isFilePaused = true;
+                }
+            } catch(e) {}
             updateStatusButtonUI();
 
+            // 3. جلب تاريخ انتهاء الصلاحية
+            document.getElementById('expireDateInput').value = "";
             try {
-                const sRes = await fetch(`https://kvdb.io/${dbBucket}/settings_${fileName}`);
-                if (sRes.ok) {
-                    const data = await sRes.json();
-                    currentFileStatus = data.status || "active";
-                    document.getElementById('expireDateInput').value = data.expires || "";
-                    updateStatusButtonUI();
+                const eRes = await fetch(`https://api.counterapi.dev/v1/${projectGroup}/expire_${fileKey}`);
+                if (eRes.ok) {
+                    const eData = await eRes.json();
+                    const val = eData.count || 0;
+                    if (val > 0) {
+                        const valStr = val.toString();
+                        document.getElementById('expireDateInput').value = `${valStr.substring(0,4)}-${valStr.substring(4,6)}-${valStr.substring(6,8)}`;
+                    }
                 }
             } catch(e) {}
         }
 
         function toggleStatus() {
-            currentFileStatus = (currentFileStatus === "active") ? "paused" : "active";
+            isFilePaused = !isFilePaused;
             updateStatusButtonUI();
         }
 
         function updateStatusButtonUI() {
             const btn = document.getElementById('statusToggleBtn');
-            if (currentFileStatus === "active") {
+            if (!isFilePaused) {
                 btn.innerText = "🟢 نشط وشغال (اضغط للإيقاف)";
                 btn.className = "toggle-btn";
             } else {
@@ -423,21 +438,25 @@
             }
         }
 
-        // حفظ البيانات السحابية وتوليد الباركود
         async function saveAndGenerateQR() {
             const fileName = document.getElementById('fileSelect').value;
             if (!fileName) return alert('من فضلك اختر ملفاً أولاً!');
             
-            const expiresValue = document.getElementById('expireDateInput').value;
-            const payload = { status: currentFileStatus, expires: expiresValue };
+            const fileKey = fileName.replace(/[^a-zA-Z0-9]/g, '_');
+            const expiresValue = document.getElementById('expireDateInput').value; 
             
-            // حفظ الإعدادات في الـ KV Store سحابياً فوراً
-            await fetch(`https://kvdb.io/${dbBucket}/settings_${fileName}`, {
-                method: 'PUT',
-                body: JSON.stringify(payload)
-            });
+            const expireInt = expiresValue ? parseInt(expiresValue.replace(/-/g, '')) : 0;
+            const pausedInt = isFilePaused ? 1 : 0;
 
-            // توليد الرابط والباركود
+            // حفظ الإعدادات على الـ CounterAPI فوراً وثبات كامل
+            try {
+                await fetch(`https://api.counterapi.dev/v1/${projectGroup}/paused_${fileKey}/set?value=${pausedInt}`);
+                await fetch(`https://api.counterapi.dev/v1/${projectGroup}/expire_${fileKey}/set?value=${expireInt}`);
+            } catch (e) {
+                alert("حدث خطأ أثناء الاتصال بالسيرفر، جرب مرة أخرى.");
+                return;
+            }
+
             const finalFileUrl = `${window.location.origin}/index.html?file=${fileName}`;
             document.getElementById('generatedUrl').innerText = finalFileUrl;
             document.getElementById('qrCodeImg').src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(finalFileUrl)}`;
