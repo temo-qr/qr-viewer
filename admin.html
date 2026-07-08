@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوحة التحكم — line4ink</title>
+    <title>لوحة التحكم</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&family=Tajawal:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
@@ -45,32 +45,7 @@
             background-size: 22px 22px;
         }
 
-        .page-wrap { width: 100%; max-width: 460px; }
-
-        .brand {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            margin-bottom: 22px;
-            direction: rtl;
-        }
-        .brand-mark {
-            width: 34px; height: 34px;
-            border-radius: 9px;
-            background: var(--ink);
-            display: flex; align-items: center; justify-content: center;
-            flex-shrink: 0;
-        }
-        .brand-mark svg { width: 18px; height: 18px; }
-        .brand-name {
-            font-family: 'Cairo', sans-serif;
-            font-weight: 800;
-            font-size: 19px;
-            letter-spacing: 0.2px;
-            color: var(--ink);
-        }
-        .brand-name span { color: var(--accent); }
+        .page-wrap { width: 100%; max-width: 460px; padding-top: 20px; }
 
         .receipt-edge {
             height: 13px;
@@ -92,7 +67,7 @@
             text-align: center;
             direction: rtl;
         }
-        .admin-panel-inner { padding: 8px 34px 34px; }
+        .admin-panel-inner { padding: 24px 34px 34px; }
 
         h2 {
             font-family: 'Cairo', sans-serif;
@@ -258,34 +233,11 @@
             border-radius: 16px;
             background: #fff;
         }
-        .hint {
-            color: var(--muted);
-            display: block;
-            margin-top: 10px;
-            font-size: 12.5px;
-        }
-
-        #loading, #error-msg {
-            padding: 13px 15px;
-            border-radius: 11px;
-            font-size: 13.5px;
-            font-weight: 600;
-            margin-bottom: 15px;
-        }
-        #loading { color: var(--warn); background: var(--warn-soft); }
-        #error-msg { color: var(--danger); background: var(--danger-soft); display: none; }
     </style>
 </head>
 <body>
 
     <div class="page-wrap">
-        <div class="brand">
-            <div class="brand-mark">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M12 2C12 2 6 9 6 14a6 6 0 0012 0c0-5-6-12-6-12z" fill="#F7F4EE"/></svg>
-            </div>
-            <div class="brand-name">line<span>4</span>ink</div>
-        </div>
-
         <div class="receipt-edge"></div>
         <div class="admin-panel" id="panel">
             <div class="admin-panel-inner">
@@ -317,10 +269,10 @@
                 <button id="genBtn" class="main-btn" onclick="saveAndGenerateQR()" style="display:none;">حفظ الإعدادات وتوليد الباركود</button>
 
                 <div id="resultBox" class="result-box">
-                    <strong class="result-title">الرابط الذكي للملف</strong>
+                    <strong class="result-title">الرابط المباشر</strong>
                     <span id="generatedUrl" class="url-text"></span>
                     <div class="qr-wrap"><img id="qrCodeImg" class="qr-img" src="" alt="QR Code"></div>
-                    <small class="hint">💡 كليك يمين واحفظ صورة الباركود للطباعة</small>
+                    <small style="color:var(--muted); display:block; margin-top:10px; font-size:12.5px;">💡 كليك يمين واحفظ صورة الباركود للطباعة</small>
                 </div>
             </div>
         </div>
@@ -387,7 +339,7 @@
             
             const fileKey = fileName.replace(/[^a-zA-Z0-9]/g, '_');
             
-            // 1. جلب عدد المشاهدات من السيرفر السحابي الجديد
+            // 1. جلب عدد المشاهدات
             try {
                 const vRes = await fetch(`https://api.counterapi.dev/v1/${projectGroup}/views_${fileKey}`);
                 if (vRes.ok) {
@@ -448,12 +400,12 @@
             const expireInt = expiresValue ? parseInt(expiresValue.replace(/-/g, '')) : 0;
             const pausedInt = isFilePaused ? 1 : 0;
 
-            // حفظ الإعدادات على الـ CounterAPI فوراً وثبات كامل
+            // الحفظ بالطريقة المباشرة الصحيحة للسيرفر السحابي
             try {
-                await fetch(`https://api.counterapi.dev/v1/${projectGroup}/paused_${fileKey}/set?value=${pausedInt}`);
-                await fetch(`https://api.counterapi.dev/v1/${projectGroup}/expire_${fileKey}/set?value=${expireInt}`);
+                await fetch(`https://api.counterapi.dev/v1/${projectGroup}/paused_${fileKey}/set/${pausedInt}`);
+                await fetch(`https://api.counterapi.dev/v1/${projectGroup}/expire_${fileKey}/set/${expireInt}`);
             } catch (e) {
-                alert("حدث خطأ أثناء الاتصال بالسيرفر، جرب مرة أخرى.");
+                alert("حدث خطأ في الاتصال، جرب مرة أخرى.");
                 return;
             }
 
@@ -461,7 +413,7 @@
             document.getElementById('generatedUrl').innerText = finalFileUrl;
             document.getElementById('qrCodeImg').src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(finalFileUrl)}`;
             document.getElementById('resultBox').style.display = 'block';
-            alert('تم حفظ إعدادات الصلاحية والتشغيل بنجاح وتحديث الباركود! ✨');
+            alert('تم حفظ الإعدادات بنجاح! ✨');
         }
     </script>
 </body>

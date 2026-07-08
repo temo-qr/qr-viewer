@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>line4ink</title>
+    <title>taim.best</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@700;800&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
@@ -62,7 +62,7 @@
         .status-title { font-family: 'Cairo', sans-serif; color: var(--ink); font-size: 21px; font-weight: 800; margin: 0 0 10px 0; }
         .status-desc { color: var(--muted); font-size: 14.5px; line-height: 1.7; margin: 0; }
 
-        /* مؤشر التحميل النظيف */
+        /* مؤشر التحميل */
         .loader-wrap { display: flex; flex-direction: column; align-items: center; gap: 18px; }
         .loader { width: 38px; height: 38px; border: 3.5px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.9s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -96,7 +96,7 @@
             let isPaused = false;
             let expireValue = 0;
 
-            // 1. الفحص السحابي للإيقاف والتشغيل (CounterAPI)
+            // 1. فحص الإيقاف المؤقت للباركود
             try {
                 const pRes = await fetch(`https://api.counterapi.dev/v1/${projectGroup}/paused_${fileKey}`);
                 if (pRes.ok) {
@@ -105,7 +105,7 @@
                 }
             } catch (e) {}
 
-            // 2. الفحص السحابي لتاريخ الصلاحية
+            // 2. فحص تاريخ انتهاء الصلاحية
             try {
                 const eRes = await fetch(`https://api.counterapi.dev/v1/${projectGroup}/expire_${fileKey}`);
                 if (eRes.ok) {
@@ -114,13 +114,13 @@
                 }
             } catch (e) {}
 
-            // إذا تم تفعيل الإيقاف المؤقت للباركود
+            // تطبيق التحكم بالإيقاف والتشغيل
             if (isPaused) {
-                showError("🚫", "الرابط متوقف مؤقتاً", "قام صاحب العمل بإيقاف صلاحية هذا الباركود مؤقتاً، يرجى المراجعة لاحقاً.");
+                showError("🚫", "الرابط متوقف مؤقتاً", "تم إيقاف صلاحية هذا الباركود مؤقتاً من قبل الإدارة.");
                 return;
             }
 
-            // إذا انتهى تاريخ الصلاحية المحدد للملف
+            // تطبيق التحكم بالصلاحية
             if (expireValue > 0) {
                 const todayInt = parseInt(new Date().toISOString().split('T')[0].replace(/-/g, ''));
                 if (todayInt > expireValue) {
@@ -131,12 +131,12 @@
                 }
             }
 
-            // 3. زيادة عداد المشاهدات الحقيقي بمقدار +1 تلقائياً في الخلفية
+            // تسجيل زيارة جديدة لعداد المشاهدات في الخلفية
             try {
                 fetch(`https://api.counterapi.dev/v1/${projectGroup}/views_${fileKey}/increment`);
             } catch(e) {}
 
-            // 4. عرض الملف النظيف بملء الشاشة
+            // عرض الملف للمتصفح بملء الشاشة
             const relativePath = "images/" + fileName;
             if (fileName.toLowerCase().endsWith('.pdf')) {
                 const absoluteUrl = window.location.origin + window.location.pathname.replace('index.html', '') + relativePath;
