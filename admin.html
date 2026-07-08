@@ -3,226 +3,334 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوحة التحكم السرية</title>
+    <title>لوحة التحكم — line4ink</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&family=Tajawal:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #6366f1;
-            --primary-hover: #4f46e5;
-            --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-            --card-bg: #ffffff;
-            --text-main: #0f172a;
-            --text-muted: #475569;
-            --border: #cbd5e1;
+            --ink: #1B1B2F;
+            --ink-soft: #34344d;
+            --accent: #3454D1;
+            --accent-hover: #2b45b3;
+            --accent-soft: #E8EDFC;
+            --paper: #F7F4EE;
+            --paper-alt: #EFEAE0;
+            --card: #FFFFFF;
+            --line: #E3DDCE;
+            --text: #1B1B2F;
+            --muted: #6B7280;
+            --success: #1F9D6C;
+            --success-soft: #E3F5EC;
+            --danger: #C4432B;
+            --danger-soft: #FBEAE5;
+            --warn: #B4691E;
+            --warn-soft: #FBF0DE;
         }
 
-        body { 
-            background: var(--bg-gradient); 
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; 
-            margin: 0; 
-            padding: 0; 
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            min-height: 100vh;
+            font-family: 'Tajawal', system-ui, sans-serif;
+            color: var(--text);
+            padding: 32px 16px;
+            background-color: var(--paper);
+            background-image:
+                radial-gradient(circle at 1px 1px, rgba(27,27,47,0.06) 1px, transparent 0);
+            background-size: 22px 22px;
         }
 
-        /* اللوحة مخفية تماماً في البداية للأمان حتى كتابة الباسورد */
-        .admin-panel { 
+        .page-wrap { width: 100%; max-width: 460px; }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 22px;
+            direction: rtl;
+        }
+        .brand-mark {
+            width: 34px; height: 34px;
+            border-radius: 9px;
+            background: var(--ink);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .brand-mark svg { width: 18px; height: 18px; }
+        .brand-name {
+            font-family: 'Cairo', sans-serif;
+            font-weight: 800;
+            font-size: 19px;
+            letter-spacing: 0.2px;
+            color: var(--ink);
+        }
+        .brand-name span { color: var(--accent); }
+
+        .receipt-edge {
+            height: 13px;
+            width: 100%;
+            background: var(--card);
+            clip-path: polygon(
+                0% 100%, 0% 0%, 5% 100%, 10% 0%, 15% 100%, 20% 0%, 25% 100%, 30% 0%,
+                35% 100%, 40% 0%, 45% 100%, 50% 0%, 55% 100%, 60% 0%, 65% 100%, 70% 0%,
+                75% 100%, 80% 0%, 85% 100%, 90% 0%, 95% 100%, 100% 0%, 100% 100%
+            );
+        }
+
+        .admin-panel {
             display: none;
             width: 100%;
-            max-width: 450px; 
-            background: var(--card-bg); 
-            padding: 40px; 
-            border-radius: 24px; 
-            box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.08); 
-            text-align: center; 
+            background: var(--card);
+            border-radius: 0 0 20px 20px;
+            box-shadow: 0 30px 60px -20px rgba(27,27,47,0.18);
+            text-align: center;
             direction: rtl;
-            border: 1px solid rgba(255, 255, 255, 0.8);
-            box-sizing: border-box;
-            margin: 20px;
-            animation: fadeIn 0.5s ease-in-out forwards;
         }
+        .admin-panel-inner { padding: 8px 34px 34px; }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .icon-wrapper {
-            width: 72px;
-            height: 72px;
-            background: #eeeaff;
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 24px;
-            font-size: 32px;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
-        }
-
-        h2 { 
-            color: var(--text-main); 
-            margin: 0 0 12px 0; 
-            font-size: 26px;
+        h2 {
+            font-family: 'Cairo', sans-serif;
+            color: var(--ink);
+            margin: 4px 0 22px 0;
+            font-size: 21px;
             font-weight: 700;
-            letter-spacing: -0.5px;
+        }
+        .eyebrow {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            color: var(--accent);
+            text-transform: uppercase;
+            display: block;
+            margin-bottom: 4px;
+            font-family: 'IBM Plex Mono', monospace;
+            direction: ltr;
         }
 
-        p { 
-            color: var(--text-muted); 
-            font-size: 15px; 
-            line-height: 1.6;
-            margin: 0 0 30px 0;
-        }
-
-        select { 
-            width: 100%; 
-            padding: 16px; 
-            margin-bottom: 20px; 
-            border: 2px solid var(--border); 
-            border-radius: 14px; 
-            box-sizing: border-box; 
-            font-size: 16px; 
-            background-color: #fff; 
-            color: var(--text-main);
-            cursor: pointer; 
-            transition: all 0.25s ease;
+        .search-box {
+            width: 100%;
+            padding: 13px 16px;
+            margin-bottom: 10px;
+            border: 1.5px solid var(--line);
+            border-radius: 12px;
+            box-sizing: border-box;
+            font-family: inherit;
+            font-size: 14.5px;
             outline: none;
-            appearance: none;
-            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: left 16px center;
-            background-size: 18px;
+            transition: border-color 0.15s, box-shadow 0.15s;
+            text-align: right;
+            background: var(--paper);
+        }
+        .search-box:focus { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); background: #fff; }
+        .search-box::placeholder { color: var(--muted); }
+
+        select {
+            width: 100%;
+            padding: 13px 14px;
+            margin-bottom: 18px;
+            border: 1.5px solid var(--line);
+            border-radius: 12px;
+            box-sizing: border-box;
+            font-family: inherit;
+            font-size: 15px;
+            background-color: #fff;
+            color: var(--text);
+            cursor: pointer;
+            outline: none;
             font-weight: 500;
         }
+        select:focus { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
 
-        select:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
-        }
-
-        button { 
-            background: var(--primary); 
-            color: white; 
-            border: none; 
-            padding: 16px 25px; 
-            font-size: 16px; 
-            font-weight: 600;
-            border-radius: 14px; 
-            cursor: pointer; 
-            width: 100%; 
-            transition: all 0.25s ease; 
-            box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3);
-        }
-
-        button:hover { 
-            background: var(--primary-hover); 
-            box-shadow: 0 20px 25px -5px rgba(99, 102, 241, 0.4);
-            transform: translateY(-2px);
-        }
-
-        button:active {
-            transform: translateY(0);
-        }
-
-        .result-box { 
-            margin-top: 35px; 
-            padding-top: 30px; 
-            border-top: 2px dashed #e2e8f0; 
-        }
-
-        .result-box strong {
-            display: block;
-            color: var(--text-main);
-            font-size: 15px;
-            margin-bottom: 10px;
-            text-align: right;
-        }
-
-        .url-text { 
-            background: #f8fafc; 
-            padding: 14px; 
-            border-radius: 10px; 
-            font-size: 13px; 
-            word-break: break-all; 
-            display: block; 
-            margin-bottom: 25px; 
-            text-align: left; 
-            direction: ltr; 
-            color: #334155;
-            border: 1px solid #e2e8f0;
-            font-family: monospace;
-        }
-
-        .qr-img { 
-            width: 210px; 
-            height: 210px; 
-            margin-top: 10px; 
-            border: 1px solid #e2e8f0; 
-            padding: 14px; 
-            border-radius: 20px;
-            background: #fff;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-        }
-
-        #loading, #error-msg { 
-            padding: 16px;
+        .meta-card {
+            background: var(--paper);
+            padding: 18px 18px 6px;
             border-radius: 14px;
-            font-size: 15px;
-            font-weight: 600;
-            margin-bottom: 20px;
-        }
-
-        #loading { 
-            color: #b45309; 
-            background: #fef3c7;
-            border: 1px solid #fde68a;
-        }
-
-        #error-msg {
-            color: #b91c1c;
-            background: #fee2e2;
-            border: 1px solid #fecaca;
+            margin-bottom: 18px;
+            text-align: right;
+            border: 1px dashed var(--line);
             display: none;
-            line-height: 1.5;
+        }
+        .meta-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .meta-label { font-size: 13.5px; color: var(--muted); font-weight: 500; }
+        .view-badge {
+            background: var(--accent-soft);
+            color: var(--accent);
+            padding: 4px 13px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 13.5px;
+            font-family: 'IBM Plex Mono', monospace;
         }
 
-        small {
-            color: #64748b;
+        .toggle-btn {
+            background: var(--success-soft);
+            color: var(--success);
+            border: 1.5px solid transparent;
+            padding: 7px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 12.5px;
+            font-family: inherit;
+            transition: all 0.15s;
+        }
+        .toggle-btn:hover { filter: brightness(0.96); }
+        .toggle-btn.paused { background: var(--danger-soft); color: var(--danger); }
+
+        input[type="date"] {
+            padding: 8px 10px;
+            border: 1.5px solid var(--line);
+            border-radius: 10px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 13px;
+            color: var(--text);
+            outline: none;
+            background: #fff;
+        }
+        input[type="date"]:focus { border-color: var(--accent); }
+
+        button.main-btn {
+            background: var(--ink);
+            color: #fff;
+            border: none;
+            padding: 15px;
+            font-family: 'Cairo', sans-serif;
+            font-size: 15.5px;
+            font-weight: 700;
+            border-radius: 13px;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s, transform 0.15s;
+        }
+        button.main-btn:hover { background: var(--accent-hover); transform: translateY(-1px); }
+        button.main-btn:active { transform: translateY(0); }
+
+        .result-box {
+            margin-top: 24px;
+            padding-top: 22px;
+            border-top: 1.5px dashed var(--line);
+            display: none;
+        }
+        .result-title {
+            display: block;
+            text-align: right;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--muted);
+            margin-bottom: 8px;
+        }
+        .url-text {
+            background: var(--paper);
+            padding: 11px 13px;
+            border-radius: 9px;
+            font-size: 12.5px;
+            word-break: break-all;
+            display: block;
+            margin-bottom: 16px;
+            text-align: left;
+            direction: ltr;
+            color: var(--ink-soft);
+            border: 1px solid var(--line);
+            font-family: 'IBM Plex Mono', monospace;
+        }
+        .qr-wrap {
+            display: flex;
+            justify-content: center;
+        }
+        .qr-img {
+            width: 176px;
+            height: 176px;
+            border: 1.5px solid var(--line);
+            padding: 14px;
+            border-radius: 16px;
+            background: #fff;
+        }
+        .hint {
+            color: var(--muted);
             display: block;
             margin-top: 10px;
-            font-size: 13px;
+            font-size: 12.5px;
         }
+
+        #loading, #error-msg {
+            padding: 13px 15px;
+            border-radius: 11px;
+            font-size: 13.5px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        #loading { color: var(--warn); background: var(--warn-soft); }
+        #error-msg { color: var(--danger); background: var(--danger-soft); display: none; }
     </style>
 </head>
 <body>
 
-    <div class="admin-panel" id="panel">
-        <div class="icon-wrapper">✨</div>
-        <h2>لوحة التحكم الذكية</h2>
-        <p>اختر الملف المرفوع مباشرة لتوليد الرابط والباركود الخاص به بنقرة واحدة.</p>
-        
-        <div id="loading">جاري جلب ملفاتك الحالية من جيت هاب...</div>
-        <div id="error-msg"></div>
-        
-        <select id="fileSelect" style="display:none;"></select>
-        <button id="genBtn" onclick="generateQRAndLink()" style="display:none;">توليد الرابط والباركود</button>
-        
-        <div id="resultBox" class="result-box" style="display:none;">
-            <strong>الرابط المباشر للملف:</strong>
-            <span id="generatedUrl" class="url-text"></span>
-            
-            <strong>كود الـ QR جاهز:</strong><br>
-            <img id="qrCodeImg" class="qr-img" src="" alt="QR Code"><br>
-            <small>💡 اضغط كليك يمين على الباركود واختار (Save image as) لحفظه</small>
+    <div class="page-wrap">
+        <div class="brand">
+            <div class="brand-mark">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M12 2C12 2 6 9 6 14a6 6 0 0012 0c0-5-6-12-6-12z" fill="#F7F4EE"/></svg>
+            </div>
+            <div class="brand-name">line<span>4</span>ink</div>
+        </div>
+
+        <div class="receipt-edge"></div>
+        <div class="admin-panel" id="panel">
+            <div class="admin-panel-inner">
+                <span class="eyebrow">ADMIN CONSOLE</span>
+                <h2>لوحة التحكم في المستندات</h2>
+
+                <input type="text" id="searchInput" class="search-box" placeholder="🔍 ابحث عن ملف من المرفوعين..." oninput="filterFiles()">
+
+                <div id="loading">جاري جلب الملفات من جيت هاب...</div>
+                <div id="error-msg"></div>
+
+                <select id="fileSelect" style="display:none;" onchange="onFileSelected()"></select>
+
+                <div id="metaCard" class="meta-card">
+                    <div class="meta-row">
+                        <span class="meta-label">👁️ إجمالي عدد المشاهدات</span>
+                        <span id="viewCount" class="view-badge">0</span>
+                    </div>
+                    <div class="meta-row">
+                        <span class="meta-label">⚙️ حالة الباركود الحالية</span>
+                        <button id="statusToggleBtn" class="toggle-btn" onclick="toggleStatus()">نشط وشغال</button>
+                    </div>
+                    <div class="meta-row">
+                        <span class="meta-label">⏳ تاريخ انتهاء الصلاحية</span>
+                        <input type="date" id="expireDateInput">
+                    </div>
+                </div>
+
+                <button id="genBtn" class="main-btn" onclick="saveAndGenerateQR()" style="display:none;">حفظ الإعدادات وتوليد الباركود</button>
+
+                <div id="resultBox" class="result-box">
+                    <strong class="result-title">الرابط الذكي للملف</strong>
+                    <span id="generatedUrl" class="url-text"></span>
+                    <div class="qr-wrap"><img id="qrCodeImg" class="qr-img" src="" alt="QR Code"></div>
+                    <small class="hint">💡 كليك يمين واحفظ صورة الباركود للطباعة</small>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
+        const dbBucket = "cb_line4ink_qr_2026"; 
+        let allFiles = []; 
+        let currentFileStatus = "active";
+
         const password = prompt("من فضلك أدخل كلمة المرور للدخول للوحة التحكم:");
         if (password === "Mohamed@9498#") {
-            // إظهار اللوحة فقط إذا كانت كلمة السر صحيحة
             document.getElementById('panel').style.display = 'block';
             loadFilesFromGitHub(); 
         } else {
@@ -232,64 +340,109 @@
 
         async function loadFilesFromGitHub() {
             try {
-                // تعديل اسم الحساب الصحيح هنا بناءً على ملفاتك الرسمية
-                const username = "line4ink"; 
-                const repoName = "qr-viewer"; 
-
-                const apiUrl = `https://api.github.com/repos/${username}/${repoName}/contents/images`;
-                
-                const response = await fetch(apiUrl);
-                if (!response.ok) throw new Error('تعذر العثور على المستودع أو الفولدر. تأكد من رفع ملفات داخل فولدر images.');
+                const response = await fetch(`https://api.github.com/repos/line4ink/qr-viewer/contents/images`);
+                if (!response.ok) throw new Error('تعذر العثور على المجلد.');
                 
                 const files = await response.json();
-                const select = document.getElementById('fileSelect');
+                allFiles = files.filter(f => f.type === 'file');
                 
-                select.innerHTML = '<option value="">-- اختر الملف من القائمة --</option>';
-                
-                let fileCount = 0;
-                files.forEach(file => {
-                    if (file.type === 'file') {
-                        const option = document.createElement('option');
-                        option.value = file.name;
-                        option.text = file.name;
-                        select.appendChild(option);
-                        fileCount++;
-                    }
-                });
-
-                if(fileCount === 0) {
-                    throw new Error('فولدر images فارغ تماماً على جيت هاب! ارفع فيه ملفات أولاً.');
-                }
-                
+                renderDropdown(allFiles);
                 document.getElementById('loading').style.display = 'none';
-                select.style.display = 'block';
+                document.getElementById('fileSelect').style.display = 'block';
                 document.getElementById('genBtn').style.display = 'block';
-                
             } catch (error) {
                 document.getElementById('loading').style.display = 'none';
-                const errorDiv = document.getElementById('error-msg');
-                errorDiv.innerText = `⚠️ خطأ: ${error.message}`;
-                errorDiv.style.display = 'block';
+                document.getElementById('error-msg').innerText = `⚠️ خطأ: ${error.message}`;
+                document.getElementById('error-msg').style.display = 'block';
             }
         }
 
-        function generateQRAndLink() {
+        function renderDropdown(filesList) {
             const select = document.getElementById('fileSelect');
-            const selectedFile = select.value;
+            select.innerHTML = '<option value="">-- اختر الملف من القائمة --</option>';
+            filesList.forEach(file => {
+                const option = document.createElement('option');
+                option.value = file.name;
+                option.text = file.name;
+                select.appendChild(option);
+            });
+        }
+
+        // ميزة البحث والفلترة الفورية
+        function filterFiles() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = allFiles.filter(f => f.name.toLowerCase().includes(query));
+            renderDropdown(filtered);
+            document.getElementById('metaCard').style.display = 'none';
+            document.getElementById('resultBox').style.display = 'none';
+        }
+
+        // جلب العداد والحالة فور اختيار الملف
+        async function onFileSelected() {
+            const fileName = document.getElementById('fileSelect').value;
+            if (!fileName) { document.getElementById('metaCard').style.display = 'none'; return; }
             
-            if (!selectedFile) {
-                alert('من فضلك اختر ملفاً أولاً!');
-                return;
+            document.getElementById('metaCard').style.display = 'block';
+            document.getElementById('viewCount').innerText = "🔄..";
+            
+            // 1. جلب عداد الزيارات
+            try {
+                const vRes = await fetch(`https://kvdb.io/${dbBucket}/views_${fileName}`);
+                document.getElementById('viewCount').innerText = vRes.ok ? await vRes.text() : "0";
+            } catch(e) { document.getElementById('viewCount').innerText = "0"; }
+            
+            // 2. جلب إعدادات الصلاحية والتشغيل
+            currentFileStatus = "active";
+            document.getElementById('expireDateInput').value = "";
+            updateStatusButtonUI();
+
+            try {
+                const sRes = await fetch(`https://kvdb.io/${dbBucket}/settings_${fileName}`);
+                if (sRes.ok) {
+                    const data = await sRes.json();
+                    currentFileStatus = data.status || "active";
+                    document.getElementById('expireDateInput').value = data.expires || "";
+                    updateStatusButtonUI();
+                }
+            } catch(e) {}
+        }
+
+        function toggleStatus() {
+            currentFileStatus = (currentFileStatus === "active") ? "paused" : "active";
+            updateStatusButtonUI();
+        }
+
+        function updateStatusButtonUI() {
+            const btn = document.getElementById('statusToggleBtn');
+            if (currentFileStatus === "active") {
+                btn.innerText = "🟢 نشط وشغال (اضغط للإيقاف)";
+                btn.className = "toggle-btn";
+            } else {
+                btn.innerText = "🔴 موقوف مؤقتاً (اضغط للتشغيل)";
+                btn.className = "toggle-btn paused";
             }
+        }
+
+        // حفظ البيانات السحابية وتوليد الباركود
+        async function saveAndGenerateQR() {
+            const fileName = document.getElementById('fileSelect').value;
+            if (!fileName) return alert('من فضلك اختر ملفاً أولاً!');
             
-            const baseUrl = window.location.origin + window.location.pathname.replace('admin.html', 'index.html');
-            const finalFileUrl = `${baseUrl}?file=${selectedFile}`;
+            const expiresValue = document.getElementById('expireDateInput').value;
+            const payload = { status: currentFileStatus, expires: expiresValue };
             
+            // حفظ الإعدادات في الـ KV Store سحابياً فوراً
+            await fetch(`https://kvdb.io/${dbBucket}/settings_${fileName}`, {
+                method: 'PUT',
+                body: JSON.stringify(payload)
+            });
+
+            // توليد الرابط والباركود
+            const finalFileUrl = `${window.location.origin}/index.html?file=${fileName}`;
             document.getElementById('generatedUrl').innerText = finalFileUrl;
-            
-            const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(finalFileUrl)}`;
-            document.getElementById('qrCodeImg').src = qrApiUrl;
+            document.getElementById('qrCodeImg').src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(finalFileUrl)}`;
             document.getElementById('resultBox').style.display = 'block';
+            alert('تم حفظ إعدادات الصلاحية والتشغيل بنجاح وتحديث الباركود! ✨');
         }
     </script>
 </body>

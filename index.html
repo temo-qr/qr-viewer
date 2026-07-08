@@ -3,22 +3,136 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مستعرض المستندات</title>
+    <title>مستعرض المستندات — line4ink</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@700;800&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        html, body { margin: 0; padding: 0; width: 100%; height: 100%; background-color: #ffffff; overflow-x: hidden; }
-        #content { width: 100%; height: 100%; }
+        :root {
+            --ink: #1B1B2F;
+            --accent: #3454D1;
+            --paper: #F7F4EE;
+            --card: #FFFFFF;
+            --line: #E3DDCE;
+            --muted: #6B7280;
+        }
+        * { box-sizing: border-box; }
+        html, body {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background-color: var(--paper);
+            font-family: 'Tajawal', system-ui, -apple-system, sans-serif;
+            overflow-x: hidden;
+        }
+        #content { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
         img { width: 100%; height: auto; display: block; }
         iframe { width: 100%; height: 100%; border: none; }
+
+        /* تصميم رسائل الحالة */
+        .status-wrap { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+        .brand-mark {
+            width: 34px; height: 34px;
+            border-radius: 9px;
+            background: var(--ink);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .brand-mark svg { width: 18px; height: 18px; }
+
+        .receipt-edge {
+            height: 12px;
+            width: 100%;
+            background: var(--card);
+            clip-path: polygon(
+                0% 100%, 0% 0%, 5% 100%, 10% 0%, 15% 100%, 20% 0%, 25% 100%, 30% 0%,
+                35% 100%, 40% 0%, 45% 100%, 50% 0%, 55% 100%, 60% 0%, 65% 100%, 70% 0%,
+                75% 100%, 80% 0%, 85% 100%, 90% 0%, 95% 100%, 100% 0%, 100% 100%
+            );
+        }
+        .status-card {
+            max-width: 380px;
+            width: 100%;
+            padding: 34px 30px 38px;
+            background: var(--card);
+            border-radius: 0 0 20px 20px;
+            box-shadow: 0 30px 60px -20px rgba(27,27,47,0.18);
+            text-align: center;
+            direction: rtl;
+            margin: 0 20px;
+        }
+        .status-icon { font-size: 44px; margin-bottom: 18px; }
+        .status-title { font-family: 'Cairo', sans-serif; color: var(--ink); font-size: 21px; font-weight: 800; margin: 0 0 10px 0; }
+        .status-desc { color: var(--muted); font-size: 14.5px; line-height: 1.7; margin: 0; }
+
+        /* مؤشر التحميل */
+        .loader-wrap { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+        .loader { width: 38px; height: 38px; border: 3.5px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.9s linear infinite; }
+        .loader-label { color: var(--muted); font-size: 13px; font-family: 'Tajawal', sans-serif; }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
-    <div id="content"></div>
+
+    <div id="content">
+        <div class="loader-wrap" id="mainLoader">
+            <div class="brand-mark">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M12 2C12 2 6 9 6 14a6 6 0 0012 0c0-5-6-12-6-12z" fill="#F7F4EE"/></svg>
+            </div>
+            <div class="loader"></div>
+            <div class="loader-label">جاري تحميل المستند...</div>
+        </div>
+    </div>
+
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const fileName = urlParams.get('file'); 
         const contentDiv = document.getElementById('content');
+        
+        // معرف فرعي سري خاص بيك لحفظ البيانات
+        const dbBucket = "cb_line4ink_qr_2026"; 
 
         if (fileName) {
+            checkFileStatusAndRender();
+        } else {
+            contentDiv.innerHTML = ""; 
+        }
+
+        async function checkFileStatusAndRender() {
+            let status = "active";
+            let expires = "";
+
+            try {
+                // 1. جلب إعدادات الملف من المخزن السحابي
+                const res = await fetch(`https://kvdb.io/${dbBucket}/settings_${fileName}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    status = data.status || "active";
+                    expires = data.expires || "";
+                }
+            } catch (e) { console.log("No remote settings found, using defaults."); }
+
+            // 2. التحقق من ميزة (إيقاف وتشغيل الباركود)
+            if (status === "paused") {
+                showError("🚫", "الرابط متوقف مؤقتاً", "قام صاحب العمل بإيقاف صلاحية هذا الباركود مؤقتاً، يرجى المراجعة لاحقاً.");
+                return;
+            }
+
+            // 3. التحقق من ميزة (صلاحية الملف التاريخية)
+            if (expires) {
+                const today = new Date().toISOString().split('T')[0];
+                if (today > expires) {
+                    showError("⏳", "انتهت صلاحية الرابط", `عذراً، هذا المستند كان متاحاً حتى تاريخ ${expires} وفقد صلاحيته الآن.`);
+                    return;
+                }
+            }
+
+            // 4. ميزة (عداد المشاهدات والزيارات) - تسجيل الزيارة في الخلفية
+            try {
+                fetch(`https://kvdb.io/${dbBucket}/views_${fileName}`).then(r => r.text()).then(currentViews => {
+                    let nextViews = (parseInt(currentViews) || 0) + 1;
+                    fetch(`https://kvdb.io/${dbBucket}/views_${fileName}`, { method: 'PUT', body: nextViews.toString() });
+                });
+            } catch(e) { console.log("Counter error"); }
+
+            // 5. عرض الملف إذا كان كل شيء سليم
             const relativePath = "images/" + fileName;
             if (fileName.toLowerCase().endsWith('.pdf')) {
                 const absoluteUrl = window.location.origin + window.location.pathname.replace('index.html', '') + relativePath;
@@ -26,9 +140,19 @@
             } else {
                 contentDiv.innerHTML = `<img src="${relativePath}" alt="Document">`;
             }
-        } else {
-            // لو حد فتح الرابط الأساسي غريب هيشوف صفحة بيضاء تماماً
-            contentDiv.innerHTML = ""; 
+        }
+
+        function showError(icon, title, desc) {
+            contentDiv.innerHTML = `
+                <div class="status-wrap">
+                    <div class="receipt-edge" style="width:380px; max-width:calc(100% - 40px);"></div>
+                    <div class="status-card">
+                        <div class="status-icon">${icon}</div>
+                        <div class="status-title">${title}</div>
+                        <div class="status-desc">${desc}</div>
+                    </div>
+                </div>
+            `;
         }
     </script>
 </body>
