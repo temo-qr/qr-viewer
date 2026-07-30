@@ -9,26 +9,61 @@
         #content { width: 100%; height: 100%; }
         img { width: 100%; height: auto; display: block; }
         iframe { width: 100%; height: 100%; border: none; }
+        #status { font-family: system-ui, sans-serif; text-align: center; padding: 40px 16px; color: #64748b; direction: rtl; }
     </style>
+    <script src="supabase-config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 <body>
     <div id="content"></div>
     <script>
         const urlParams = new URLSearchParams(window.location.search);
-        const fileName = urlParams.get('file'); 
+        const fileId = urlParams.get('id');
+        const fileName = urlParams.get('file');
         const contentDiv = document.getElementById('content');
 
-        if (fileName) {
-            const relativePath = "images/" + fileName;
-            if (fileName.toLowerCase().endsWith('.pdf')) {
-                const absoluteUrl = window.location.origin + window.location.pathname.replace('index.html', '') + relativePath;
+        function showImageOrPdf(relativeOrAbsoluteUrl, name, isAbsolute) {
+            if (name.toLowerCase().endsWith('.pdf')) {
+                const absoluteUrl = isAbsolute
+                    ? relativeOrAbsoluteUrl
+                    : window.location.origin + window.location.pathname.replace('index.html', '') + relativeOrAbsoluteUrl;
                 contentDiv.innerHTML = `<iframe src="https://docs.google.com/viewer?url=${encodeURIComponent(absoluteUrl)}&embedded=true"></iframe>`;
             } else {
-                contentDiv.innerHTML = `<img src="${relativePath}" alt="Document">`;
+                contentDiv.innerHTML = `<img src="${relativeOrAbsoluteUrl}" alt="Document">`;
             }
+        }
+
+        async function loadById(id) {
+            contentDiv.innerHTML = '<div id="status">جاري التحميل...</div>';
+            try {
+                const client = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+                const { data: row, error } = await client
+                    .from('qr_files')
+                    .select('storage_path, original_name')
+                    .eq('id', id)
+                    .single();
+
+                if (error || !row) {
+                    contentDiv.innerHTML = '<div id="status">هذا الملف غير موجود.</div>';
+                    return;
+                }
+
+                const { data: publicUrlData } = client.storage.from('qr-files').getPublicUrl(row.storage_path);
+                showImageOrPdf(publicUrlData.publicUrl, row.original_name, true);
+            } catch (e) {
+                contentDiv.innerHTML = '<div id="status">تعذر تحميل الملف.</div>';
+            }
+        }
+
+        if (fileId) {
+            // الطريقة الجديدة: id ثابت مربوط بالملف في Supabase، يفضل شغال حتى لو استُبدلت الصورة
+            loadById(fileId);
+        } else if (fileName) {
+            // الطريقة القديمة (متوافقة مع الباركودات المطبوعة قبل كده): اسم ملف مباشر داخل images/
+            showImageOrPdf("images/" + fileName, fileName, false);
         } else {
             // لو حد فتح الرابط الأساسي غريب هيشوف صفحة بيضاء تماماً
-            contentDiv.innerHTML = ""; 
+            contentDiv.innerHTML = "";
         }
     </script>
 </body>
