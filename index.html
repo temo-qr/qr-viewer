@@ -20,6 +20,11 @@
 
         contentDiv.innerHTML = "";
 
+        function baseName(name) {
+            const idx = name.lastIndexOf('.');
+            return idx > 0 ? name.slice(0, idx) : name;
+        }
+
         if (fileName) {
             const relativePath = "images/" + fileName;
             if (fileName.toLowerCase().endsWith('.pdf')) {
@@ -29,8 +34,12 @@
                 contentDiv.appendChild(iframe);
             } else {
                 const img = document.createElement('img');
-                img.src = relativePath;
                 img.alt = "Document";
+                img.onerror = function () {
+                    img.onerror = null;
+                    img.src = relativePath;
+                };
+                img.src = "images/" + baseName(fileName) + ".webp";
                 contentDiv.appendChild(img);
             }
         }
