@@ -18,18 +18,32 @@
         const fileName = urlParams.get('file'); 
         const contentDiv = document.getElementById('content');
 
+        contentDiv.innerHTML = "";
+
+        function baseName(name) {
+            const idx = name.lastIndexOf('.');
+            return idx > 0 ? name.slice(0, idx) : name;
+        }
+
         if (fileName) {
             const relativePath = "images/" + fileName;
             if (fileName.toLowerCase().endsWith('.pdf')) {
                 const absoluteUrl = window.location.origin + window.location.pathname.replace('index.html', '') + relativePath;
-                contentDiv.innerHTML = `<iframe src="https://docs.google.com/viewer?url=${encodeURIComponent(absoluteUrl)}&embedded=true"></iframe>`;
+                const iframe = document.createElement('iframe');
+                iframe.src = "https://docs.google.com/viewer?url=" + encodeURIComponent(absoluteUrl) + "&embedded=true";
+                contentDiv.appendChild(iframe);
             } else {
-                contentDiv.innerHTML = `<img src="${relativePath}" alt="Document">`;
+                const img = document.createElement('img');
+                img.alt = "Document";
+                img.onerror = function () {
+                    img.onerror = null;
+                    img.src = relativePath;
+                };
+                img.src = "images/" + baseName(fileName) + ".webp";
+                contentDiv.appendChild(img);
             }
-        } else {
-            // لو حد فتح الرابط الأساسي غريب هيشوف صفحة بيضاء تماماً
-            contentDiv.innerHTML = ""; 
         }
+        // لو حد فتح الرابط الأساسي غريب هيشوف صفحة بيضاء تماماً (fileName فاضي)
     </script>
 </body>
 </html>

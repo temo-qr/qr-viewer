@@ -1,0 +1,91 @@
+name: Convert new images to WebP
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'images/**'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: webp-conversion
+  cancel-in-progress: false
+
+jobs:
+  convert:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install Pillow
+        run: pip install Pillow
+
+      - name: Convert JPG/PNG images missing a WebP counterpart
+        run: |
+          python3 - <<'PYEOF'
+          import os
+          from PIL import Image
+
+          IMG_DIR = "images"
+          QUALITY = 75
+          SKIP_EXTS = (".webp", ".pdf")
+          converted = []
+
+          for fname in sorted(os.listdir(IMG_DIR)):
+              path = os.path.join(IMG_DIR, fname)
+              if not os.path.isfile(path):
+                  continue
+              ext = os.path.splitext(fname)[1].lower()
+              if ext in SKIP_EXTS:
+                  continue
+              base = fname[: -len(ext)] if ext else fname
+              webp_path = os.path.join(IMG_DIR, base + ".webp")
+              if os.path.exists(webp_path):
+                  continue
+              try:
+                  img = Image.open(path)
+                  img.load()
+              except Exception as e:
+                  print(f"skip {fname}: {e}")
+                  continue
+              if img.mode in ("RGBA", "LA") or (img.mode == "P" and "transparency" in img.info):
+                  img = img.convert("RGBA")
+              else:
+                  img = img.convert("RGB")
+              img.save(webp_path, "WEBP", quality=QUALITY)
+              img.close()
+              os.remove(path)
+              converted.append(base + ".webp")
+              print(f"converted {fname} -> {base}.webp (original removed)")
+
+          with open("_converted_list.txt", "w") as f:
+              f.write("\n".join(converted))
+          PYEOF
+
+      - name: Commit and push new WebP files
+        run: |
+          if [ -s _converted_list.txt ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add -A -- images/
+            git commit -m "Auto-convert new images to WebP (originals removed)"
+
+            for i in 1 2 3; do
+              if git push; then
+                break
+              fi
+              echo "push rejected, pulling and retrying ($i/3)"
+              git pull --rebase origin main
+            done
+          else
+            echo "No new images to convert"
+          fi
+          rm -f _converted_list.txt
