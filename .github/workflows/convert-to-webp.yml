@@ -36,7 +36,7 @@ jobs:
 
           IMG_DIR = "images"
           QUALITY = 75
-          RASTER_EXTS = (".jpg", ".jpeg", ".png")
+          SKIP_EXTS = (".webp", ".pdf")
           converted = []
 
           for fname in sorted(os.listdir(IMG_DIR)):
@@ -44,7 +44,7 @@ jobs:
               if not os.path.isfile(path):
                   continue
               ext = os.path.splitext(fname)[1].lower()
-              if ext not in RASTER_EXTS:
+              if ext in SKIP_EXTS:
                   continue
               base = fname[: -len(ext)] if ext else fname
               webp_path = os.path.join(IMG_DIR, base + ".webp")
@@ -61,8 +61,10 @@ jobs:
               else:
                   img = img.convert("RGB")
               img.save(webp_path, "WEBP", quality=QUALITY)
+              img.close()
+              os.remove(path)
               converted.append(base + ".webp")
-              print(f"converted {fname} -> {base}.webp")
+              print(f"converted {fname} -> {base}.webp (original removed)")
 
           with open("_converted_list.txt", "w") as f:
               f.write("\n".join(converted))
@@ -73,8 +75,8 @@ jobs:
           if [ -s _converted_list.txt ]; then
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add images/*.webp
-            git commit -m "Auto-convert new images to WebP"
+            git add -A -- images/
+            git commit -m "Auto-convert new images to WebP (originals removed)"
 
             for i in 1 2 3; do
               if git push; then
