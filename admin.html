@@ -232,29 +232,34 @@
 
         async function loadFilesFromGitHub() {
             try {
-                // تعديل اسم الحساب الصحيح هنا بناءً على ملفاتك الرسمية
-                const username = "line4ink"; 
-                const repoName = "qr-viewer"; 
+                const username = "temo-qr";
+                const repoName = "qr-viewer";
+                const branch = "main";
 
-                const apiUrl = `https://api.github.com/repos/${username}/${repoName}/contents/images`;
-                
-                const response = await fetch(apiUrl);
+                // contents API بيرجع أول 1000 ملف بس، فبنقرأ شجرة الفولدر (git trees) اللي مفيهاش الحد ده
+                const rootRes = await fetch(`https://api.github.com/repos/${username}/${repoName}/git/trees/${branch}`);
+                if (!rootRes.ok) throw new Error('تعذر العثور على المستودع أو الفولدر. تأكد من رفع ملفات داخل فولدر images.');
+                const imagesDir = (await rootRes.json()).tree.find(t => t.path === 'images' && t.type === 'tree');
+                if (!imagesDir) throw new Error('تعذر العثور على المستودع أو الفولدر. تأكد من رفع ملفات داخل فولدر images.');
+
+                const response = await fetch(`https://api.github.com/repos/${username}/${repoName}/git/trees/${imagesDir.sha}`);
                 if (!response.ok) throw new Error('تعذر العثور على المستودع أو الفولدر. تأكد من رفع ملفات داخل فولدر images.');
-                
-                const files = await response.json();
+
+                const files = (await response.json()).tree
+                    .filter(file => file.type === 'blob')
+                    .map(file => file.path)
+                    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
                 const select = document.getElementById('fileSelect');
-                
+
                 select.innerHTML = '<option value="">-- اختر الملف من القائمة --</option>';
-                
+
                 let fileCount = 0;
-                files.forEach(file => {
-                    if (file.type === 'file') {
-                        const option = document.createElement('option');
-                        option.value = file.name;
-                        option.text = file.name;
-                        select.appendChild(option);
-                        fileCount++;
-                    }
+                files.forEach(name => {
+                    const option = document.createElement('option');
+                    option.value = name;
+                    option.text = name;
+                    select.appendChild(option);
+                    fileCount++;
                 });
 
                 if(fileCount === 0) {
