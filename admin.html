@@ -304,6 +304,7 @@
             </div>
 
             <div id="resultBox" class="qr-wrap">
+                <div class="msg live" id="liveStatus" data-live="" style="display:none;margin:0 0 14px"></div>
                 <div class="link-item" style="text-align:right">
                     <div class="url" id="generatedUrl"></div>
                     <div class="acts">
@@ -312,7 +313,8 @@
                     </div>
                 </div>
                 <img id="qrCodeImg" src="" alt="QR Code">
-                <small>💡 كليك يمين على الباركود ← Save image as</small>
+                <button class="main" id="dlBtn" style="margin-top:14px">⬇️ تحميل الباركود (PNG)</button>
+                <small>الصورة بجودة عالية للطباعة (1000×1000)</small>
             </div>
         </div>
     </div>
@@ -499,8 +501,61 @@
         qr.textContent = '🔳 الباركود';
         qr.onclick = () => { showResult(url); document.querySelector('[data-view=linksView]').click(); };
         acts.append(copy, qr);
-        box.append(u, acts);
+        const live = document.createElement('div');
+        live.className = 'msg live';
+        live.dataset.live = finalName;
+        live.style.marginBottom = '10px';
+        box.append(live, u, acts);
         $('uploadedLinks').append(box);
+        watchLive(finalName);
+    }
+
+    // ---------- عدّاد النشر: بيستنى لحد ما الصورة تبقى شغالة فعلًا على الموقع ----------
+    const liveWatch = {};
+    const LIVE_TIMEOUT = 8 * 60;
+
+    function fmtTime(sec) {
+        return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0');
+    }
+
+    function renderLive(name) {
+        const w = liveWatch[name];
+        if (!w) return;
+        const t = fmtTime(w.secs);
+        const view = w.state === 'ok'
+            ? ['ok', `✅ الصورة شغالة على الموقع دلوقتي (استغرقت ${t})`]
+            : w.state === 'late'
+                ? ['err', '⚠️ اتأخرت أكتر من 8 دقايق. بص على تبويب Actions في GitHub.']
+                : ['info', `⏳ لسه بتتنشر على الموقع... ${t} (متقفلش الصفحة)`];
+        document.querySelectorAll('.live').forEach(el => {
+            if (el.dataset.live !== name) return;
+            el.className = 'msg live ' + view[0];
+            el.textContent = view[1];
+            el.style.display = 'block';
+        });
+    }
+
+    function watchLive(name) {
+        const w = { start: Date.now(), secs: 0, state: 'wait' };
+        liveWatch[name] = w;
+        let checking = false;
+        const tick = async () => {
+            w.secs = Math.floor((Date.now() - w.start) / 1000);
+            if (w.secs > LIVE_TIMEOUT) w.state = 'late';
+            if (w.state === 'wait' && w.secs % 4 === 0 && !checking) {
+                checking = true;
+                try {
+                    const r = await fetch(`https://tuvsuod.com/images/${encodeURIComponent(name)}?cb=${Date.now()}`, { cache: 'no-store' });
+                    if (r.ok) w.state = 'ok';
+                } catch (e) { /* لسه */ }
+                checking = false;
+                w.secs = Math.floor((Date.now() - w.start) / 1000);
+            }
+            renderLive(name);
+            if (w.state !== 'wait') clearInterval(w.timer);
+        };
+        w.timer = setInterval(tick, 1000);
+        tick();
     }
 
     // ---------- الرفع ----------
@@ -580,7 +635,7 @@
             showResult(uploadedBatch[0].url);
             document.querySelector('[data-view=linksView]').click();
         }
-        showMsg(msg, 'ok', `تم رفع ${doneCount} ملف. بيتحولوا WebP تلقائي خلال دقيقة أو اتنين، والروابط تحت شغالة على طول.`);
+        showMsg(msg, 'ok', `تم رفع ${doneCount} ملف على GitHub. الرابط هيشتغل لما الموقع يخلّص النشر (عادةً دقيقة أو اتنين)، والعدّاد تحت بيقولك أول ما يبقى جاهز.`);
     });
 
     // ---------- طباعة كل الباركودات ----------
@@ -659,9 +714,37 @@
         $('generatedUrl').textContent = url;
         $('qrCodeImg').src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}`;
         $('resultBox').style.display = 'block';
+        const fileName = new URL(url).searchParams.get('file');
+        const ls = $('liveStatus');
+        if (liveWatch[fileName]) { ls.dataset.live = fileName; renderLive(fileName); }
+        else { ls.dataset.live = ''; ls.style.display = 'none'; }
         $('openBtn').onclick = () => window.open(url, '_blank');
         $('copyBtn').onclick = () => navigator.clipboard.writeText(url).then(() => { $('copyBtn').textContent = '✔ اتنسخ'; });
         $('copyBtn').textContent = '📋 نسخ الرابط';
+        $('dlBtn').onclick = () => downloadQR(url);
+    }
+
+    // بيحمّل الباركود PNG بجودة عالية باسم الملف (مثلًا Q367.png)
+    async function downloadQR(url) {
+        const btn = $('dlBtn');
+        const fileName = (new URL(url).searchParams.get('file') || 'qr').replace(/\.[^.]+$/, '') + '.png';
+        const src = `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&margin=20&data=${encodeURIComponent(url)}`;
+        btn.disabled = true;
+        try {
+            const blob = await (await fetch(src)).blob();
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = fileName;
+            document.body.append(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+            btn.textContent = '✔ اتحمّل ' + fileName;
+        } catch (e) {
+            window.open(src, '_blank'); // لو التحميل المباشر فشل نفتحها في تبويب
+        }
+        btn.disabled = false;
+        setTimeout(() => { btn.textContent = '⬇️ تحميل الباركود (PNG)'; }, 2500);
     }
 
     $('genBtn').addEventListener('click', () => {
