@@ -367,6 +367,8 @@
     // ---------- التوكين ----------
     $('tokenInput').value = localStorage.getItem('qr_admin_token') || '';
     $('tokenBox').open = !$('tokenInput').value;
+    // بنحفظه أول ما تلصقه، مش بس لما ترفع
+    $('tokenInput').addEventListener('input', e => localStorage.setItem('qr_admin_token', e.target.value.trim()));
 
     // ---------- الترقيم التلقائي ----------
     function computeNextNumber(prefix) {
