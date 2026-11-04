@@ -263,6 +263,7 @@
                 <summary>🔑 التوكين</summary>
                 <input type="password" id="tokenInput" class="ltr" style="margin-top:12px" placeholder="github_pat_..." autocomplete="off">
                 <div class="hint" style="margin:8px 0 0">بيتحفظ في متصفحك أنت بس، ومش بيتكتب في الموقع.</div>
+                <div class="hint" id="tokenSaved" style="margin:6px 0 0;color:#15803d;display:none">✓ التوكين محفوظ على الجهاز ده</div>
             </details>
 
             <div class="row">
@@ -365,10 +366,37 @@
     }));
 
     // ---------- التوكين ----------
-    $('tokenInput').value = localStorage.getItem('qr_admin_token') || '';
+    // التوكين بيتخزن في localStorage ونسخة احتياطية في IndexedDB، ونطلب من المتصفح ميمسحوش
+    const TOKEN_KEY = 'qr_admin_token';
+    const idb = (mode, fn) => new Promise(res => {
+        try {
+            const open = indexedDB.open('qr_admin', 1);
+            open.onupgradeneeded = () => open.result.createObjectStore('kv');
+            open.onerror = () => res(null);
+            open.onsuccess = () => {
+                const req = fn(open.result.transaction('kv', mode).objectStore('kv'));
+                req.onsuccess = () => res(req.result || null);
+                req.onerror = () => res(null);
+            };
+        } catch (_) { res(null); }
+    });
+    function saveToken(v) {
+        v = (v || '').trim();
+        localStorage.setItem(TOKEN_KEY, v);
+        idb('readwrite', st => st.put(v, TOKEN_KEY));
+        $('tokenSaved').style.display = v ? 'block' : 'none';
+    }
+    $('tokenInput').value = localStorage.getItem(TOKEN_KEY) || '';
     $('tokenBox').open = !$('tokenInput').value;
+    $('tokenSaved').style.display = $('tokenInput').value ? 'block' : 'none';
+    if (!$('tokenInput').value) {
+        idb('readonly', st => st.get(TOKEN_KEY)).then(v => {
+            if (v && !$('tokenInput').value) { $('tokenInput').value = v; localStorage.setItem(TOKEN_KEY, v); $('tokenBox').open = false; $('tokenSaved').style.display = 'block'; }
+        });
+    }
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
     // بنحفظه أول ما تلصقه، مش بس لما ترفع
-    $('tokenInput').addEventListener('input', e => localStorage.setItem('qr_admin_token', e.target.value.trim()));
+    $('tokenInput').addEventListener('input', e => saveToken(e.target.value));
 
     // ---------- الترقيم التلقائي ----------
     function computeNextNumber(prefix) {
@@ -525,7 +553,7 @@
         if (!w) return;
         const t = fmtTime(w.secs);
         const view = w.state === 'ok'
-            ? ['ok', `✅ الصورة شغالة على الموقع دلوقتي (استغرقت ${t})`]
+            ? ['ok', `✅ الرابط شغال دلوقتي (استغرقت ${t})`]
             : w.state === 'late'
                 ? ['err', '⚠️ اتأخرت أكتر من 8 دقايق. بص على تبويب Actions في GitHub.']
                 : ['info', `⏳ لسه بتتنشر على الموقع... ${t} (متقفلش الصفحة)`];
@@ -547,7 +575,9 @@
             if (w.state === 'wait' && w.secs % 4 === 0 && !checking) {
                 checking = true;
                 try {
-                    const r = await fetch(`https://tuvsuod.com/images/${encodeURIComponent(name)}?cb=${Date.now()}`, { cache: 'no-store' });
+                    // الصور بتشتغل من GitHub مباشرة (صفحة العميل بتجيبها منه لحد ما النشر يخلّص)، الـ PDF لازم الموقع
+                    const src = name.toLowerCase().endsWith('.pdf') ? 'https://tuvsuod.com/images/' : 'https://raw.githubusercontent.com/temo-qr/qr-viewer/main/images/';
+                    const r = await fetch(`${src}${encodeURIComponent(name)}?cb=${Date.now()}`, { cache: 'no-store' });
                     if (r.ok) w.state = 'ok';
                 } catch (e) { /* لسه */ }
                 checking = false;
@@ -570,7 +600,7 @@
         if (!token) { $('tokenBox').open = true; showMsg(msg, 'err', 'ادخل التوكين الأول (الخطوات فوق).'); return; }
         if (!prefix || isNaN(start)) { showMsg(msg, 'err', 'اكتب البادئة والرقم.'); return; }
 
-        localStorage.setItem('qr_admin_token', token);
+        saveToken(token);
         uploading = true;
         $('uploadedLinks').innerHTML = '';
         $('printBtn').style.display = 'none';

@@ -35,11 +35,17 @@
             } else {
                 const img = document.createElement('img');
                 img.alt = "Document";
+                // لو الصورة لسه ما وصلتش لنشر الموقع (بيتأخر دقايق)، نجيبها مباشرة من GitHub
+                const webpName = baseName(fileName) + ".webp";
+                const rawBase = "https://raw.githubusercontent.com/temo-qr/qr-viewer/main/images/";
+                const sources = ["images/" + webpName, rawBase + encodeURIComponent(webpName), relativePath];
+                let tryIndex = 0;
                 img.onerror = function () {
-                    img.onerror = null;
-                    img.src = relativePath;
+                    tryIndex++;
+                    if (tryIndex < sources.length) img.src = sources[tryIndex];
+                    else img.onerror = null;
                 };
-                img.src = "images/" + baseName(fileName) + ".webp";
+                img.src = sources[0];
                 contentDiv.appendChild(img);
             }
         }
